@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 function App() {
-    const [question, setQuestion] = useState("");
+  const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [citations, setCitations] = useState([]);
   const [grounded, setGrounded] = useState(null);
@@ -52,7 +52,8 @@ function App() {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          question: question
+          question: question,
+          ...(selectedDocumentId ? { document_id: selectedDocumentId } : {}),
         })
       }
     );
@@ -60,7 +61,8 @@ function App() {
     const data = await response.json();
     console.log("Data from backend:", data);
     setAnswer(data.answer);
-    setSources(data.sources);
+    setCitations(data.citations || []);
+    setGrounded(data.grounded);
   }
 
   return (
@@ -88,6 +90,17 @@ function App() {
                 {f.name}
               </a>{" "}
               ({f.size_mb} MB)
+              {f.document_id ? (
+                <>
+                  {" "}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDocumentId(f.document_id)}
+                  >
+                    Ask this paper
+                  </button>
+                </>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -103,6 +116,18 @@ function App() {
         placeholder="Ask something..."
       />
 
+      {selectedDocumentId ? (
+        <p>
+          Scoped to document {selectedDocumentId.slice(0, 12)}…
+          {" "}
+          <button type="button" onClick={() => setSelectedDocumentId("")}>
+            Search all papers
+          </button>
+        </p>
+      ) : (
+        <p>Searching the whole library.</p>
+      )}
+
       <button onClick={askQuestion}>
         Ask
       </button>
@@ -112,11 +137,14 @@ function App() {
       {/* This checks if the answer is a list (Array) and extracts the text from the first item */}
       <p>{Array.isArray(answer) ? answer[0].text : (typeof answer === 'object' ? answer.text : answer)}</p>
 
-      <h3>Retrieved Sources</h3>
+      <h3>Citations</h3>
+      {grounded === false ? <p>Ungrounded: the model refused to speculate.</p> : null}
 
-      {sources && sources.map((source, index) => (
-        <p key={index}>
-          {source.text ? source.text : "No text available"}
+      {citations && citations.map((citation, index) => (
+        <p key={citation.chunk_id || index}>
+          [{index + 1}] {citation.source}
+          {citation.page != null ? `, page ${citation.page}` : ""}
+          : {citation.snippet || "No text available"}
         </p>
       ))}
     </div>

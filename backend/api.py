@@ -6,7 +6,7 @@ from typing import Optional
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from starlette.concurrency import run_in_threadpool
 
 from backend.config import UPLOAD_DIR
@@ -27,6 +27,13 @@ class QuestionInput(BaseModel):
         max_length=64,
         pattern=r"^[0-9a-fA-F]{64}$",
     )
+
+    @field_validator("document_id", mode="before")
+    @classmethod
+    def empty_document_id(cls, value: Optional[str]) -> Optional[str]:
+        if value == "":
+            return None
+        return value
 
 
 def _stored_path_for_document(document_id: str, original_filename: str | None = None) -> Path:

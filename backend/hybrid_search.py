@@ -44,9 +44,12 @@ def retrieve_documents(
             filter=metadata_filter
         )
 
-        # --- NEW CHANGE: Print how many results Pinecone actually found ---
-        match_count = len(results.get("matches", []))
-        print(f"STEP 3: Pinecone found {match_count} matches.")
+        matches = (
+            results.get("matches", [])
+            if isinstance(results, dict)
+            else getattr(results, "matches", None) or []
+        )
+        print(f"STEP 3: Pinecone found {len(matches)} matches.")
 
         
     # --- NEW CHANGE: Catch the error and return an empty list so the app does not crash ---
@@ -54,18 +57,22 @@ def retrieve_documents(
         print(f"Network error: {error}")
         return []
 
-    # 3. Convert Pinecone results into a clean structure
     documents = []
 
-    for match in results["matches"]:
-        metadata = match.get("metadata", {})
+    for match in matches:
+        metadata = (
+            match.get("metadata", {})
+            if isinstance(match, dict)
+            else (getattr(match, "metadata", None) or {})
+        )
+        if hasattr(metadata, "items") and not isinstance(metadata, dict):
+            metadata = dict(metadata)
 
         documents.append({
-            # --- NEW CHANGE: Add 'or "No text found"' so it never returns None ---
             "text": metadata.get("text") or "No text found",
             "score": match.get("score") if isinstance(match, dict) else getattr(match, "score", None),
             "chunk_id": (
-                match.get("id", "")
+                str(match.get("id") or "")
                 if isinstance(match, dict)
                 else str(getattr(match, "id", "") or "")
             ),
