@@ -1,0 +1,15 @@
+# Project: Claro (Academic RAG)
+
+## Context
+Claro is a portfolio-grade Retrieval-Augmented Generation (RAG) system built for academic research. It is not a basic PDF chatbot. It is a "cite-or-refuse" research assistant.
+
+## Tech Stack
+*   **Backend:** FastAPI, Python, LangChain, Pinecone (Vector DB), Gemini API (Embeddings & Generation).
+*   **Frontend:** React, Vite, Tailwind CSS.
+
+## Core Engineering Principles (Strictly Enforce)
+1.  **Document Identity is Sacred:** Never use filenames as IDs. Always use SHA-256 hashes of file bytes to prevent collisions and duplicates.
+2.  **Cite-or-Refuse:** The LLM must always ground its answers using provided citations (e.g., [Page X]). If the context lacks the answer, the LLM must explicitly refuse to answer. Do not allow hallucination.
+3.  **Stateful Ingestion:** Uploads must be idempotent. If a file exists (by hash), skip ingestion. If re-indexed, older vectors tied to that ID must be purged from Pinecone before upserting new ones.
+4.  **No Orphaned Data:** Deleting a document must delete its physical file in `/uploads/` and all corresponding vectors in Pinecone.
+5.  **Production-Ready Python:** Use type hints (`-> dict`, `: str`), asynchronous functions (`async def`), and proper error handling (`HTTPException`).

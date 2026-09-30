@@ -1,10 +1,13 @@
 import os
+from typing import List
 
 from dotenv import load_dotenv
 from pinecone import Pinecone
 
 
 load_dotenv()
+
+CHUNK_ID_PREFIX_TEMPLATE = "{document_id}-chunk-"
 
 
 def get_pinecone_index():
@@ -18,6 +21,47 @@ def get_pinecone_index():
     index = pc.Index("academic-files-rag")
 
     return index
+
+
+def _chunk_id_prefix(document_id: str) -> str:
+    return CHUNK_ID_PREFIX_TEMPLATE.format(document_id=document_id)
+
+
+def list_vector_ids_for_document(document_id: str) -> List[str]:
+    """Return all Pinecone vector IDs for a SHA-256 document_id."""
+    index = get_pinecone_index()
+    prefix = _chunk_id_prefix(document_id)
+    collected: List[str] = []
+
+    for id_batch in index.list(prefix=prefix):
+        collected.extend(id_batch)
+
+    return collected
+
+
+def document_exists(document_id: str) -> bool:
+    """True if this document_id already has at least one vector in Pinecone."""
+    index = get_pinecone_index()
+    prefix = _chunk_id_prefix(document_id)
+
+    for id_batch in index.list(prefix=prefix, limit=1):
+        if id_batch:
+            return True
+    return False
+
+
+def delete_vectors_by_document_id(document_id: str) -> int:
+    """Purge every vector whose ID is tied to this document_id. Returns count deleted."""
+    vector_ids = list_vector_ids_for_document(document_id)
+    if not vector_ids:
+        return 0
+
+    index = get_pinecone_index()
+    batch_size = 1000
+    for start in range(0, len(vector_ids), batch_size):
+        index.delete(ids=vector_ids[start:start + batch_size])
+
+    return len(vector_ids)
 
 
 def store_chunks(chunks, embeddings, batch_size=50):
