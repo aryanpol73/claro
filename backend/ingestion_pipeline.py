@@ -10,7 +10,11 @@ from backend.chunking import attach_document_id, split_documents
 from backend.embeddings import get_embeddings
 from backend.vectorstore import delete_vectors_by_document_id, store_chunks
 
-def ingest_document(file_path: str, document_id: str | None = None) -> dict:
+def ingest_document(
+    file_path: str,
+    document_id: str | None = None,
+    source_name: str | None = None,
+) -> dict:
 
     # Check file size before starting ingestion
     file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
@@ -28,7 +32,11 @@ def ingest_document(file_path: str, document_id: str | None = None) -> dict:
     # 1. Load document
     documents = load_document(file_path)
     # 2. Add metadata
-    documents = add_metadata(documents, document_id=document_id)
+    documents = add_metadata(
+        documents,
+        document_id=document_id,
+        source_name=source_name or os.path.basename(file_path),
+    )
     print(f"DEBUG 1: Loaded {len(documents) if documents else 0} pages from the PDF.")
 
 

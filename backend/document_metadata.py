@@ -28,14 +28,14 @@ def generate_document_id(file_bytes: Union[bytes, bytearray, BinaryIO]) -> str:
     return hasher.hexdigest()
 
 
-def add_metadata(documents, document_id: str):
+def add_metadata(documents, document_id: str, source_name: str | None = None):
     """Attach SHA-256 document_id and cleaned source/page fields to each page."""
     for document in documents:
         source_path = document.metadata.get("source", "")
         page_number = document.metadata.get("page_label", "")
-        source_name = os.path.basename(source_path)
+        resolved_source = source_name or os.path.basename(source_path)
 
-        document.metadata["source"] = source_name
+        document.metadata["source"] = resolved_source
         document.metadata["page"] = page_number
         document.metadata["document_id"] = document_id
 

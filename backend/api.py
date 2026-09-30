@@ -85,6 +85,7 @@ async def upload_file(file: UploadFile = File(...)) -> dict:
             ingest_document,
             str(file_path),
             document_id,
+            original_filename,
         )
         result["filename"] = original_filename
         result["skipped"] = False
