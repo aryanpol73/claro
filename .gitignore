@@ -1,0 +1,22 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Environment
+.env
+
+# Node
+node_modules/
+frontend/dist/
+
+# IDE
+.vscode/
+
+# Chroma/local data
+chroma_db/
+
+# Uploaded files (keep user documents out of git)
+backend/uploads/
+uploads/
