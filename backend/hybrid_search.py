@@ -63,7 +63,15 @@ def retrieve_documents(
         documents.append({
             # --- NEW CHANGE: Add 'or "No text found"' so it never returns None ---
             "text": metadata.get("text") or "No text found",
-            "score": match.get("score"),
+            "score": match.get("score") if isinstance(match, dict) else getattr(match, "score", None),
+            "chunk_id": (
+                match.get("id", "")
+                if isinstance(match, dict)
+                else str(getattr(match, "id", "") or "")
+            ),
+            "document_id": metadata.get("document_id", ""),
+            "source": metadata.get("source", ""),
+            "page": metadata.get("page", ""),
             "metadata": metadata
         })
 

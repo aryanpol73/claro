@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 
 function App() {
-  const [question, setQuestion] = useState("");
+    const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
-  const [sources, setSources] = useState([]);
+  const [citations, setCitations] = useState([]);
+  const [grounded, setGrounded] = useState(null);
   const [file, setFile] = useState(null);
   const [files, setFiles] = useState([]);
+  const [selectedDocumentId, setSelectedDocumentId] = useState("");
 
   async function refreshFiles() {
     try {

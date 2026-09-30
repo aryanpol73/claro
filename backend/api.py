@@ -2,6 +2,8 @@ import os
 from datetime import datetime
 from pathlib import Path
 
+from typing import Optional
+
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
@@ -10,7 +12,7 @@ from starlette.concurrency import run_in_threadpool
 from backend.config import UPLOAD_DIR
 from backend.document_metadata import generate_document_id
 from backend.ingestion_pipeline import ingest_document
-from backend.rag import ask_rag
+from backend.rag import RAGResponse, ask_rag
 from backend.vectorstore import delete_vectors_by_document_id, document_exists
 
 router = APIRouter()
@@ -18,6 +20,13 @@ router = APIRouter()
 
 class QuestionInput(BaseModel):
     question: str = Field(..., max_length=2000)
+    document_id: Optional[str] = Field(
+        default=None,
+        description="When set, retrieve only chunks from this SHA-256 document_id.",
+        min_length=64,
+        max_length=64,
+        pattern=r"^[0-9a-fA-F]{64}$",
+    )
 
 
 def _stored_path_for_document(document_id: str, original_filename: str | None = None) -> Path:
@@ -38,14 +47,19 @@ def home():
     return {"message": "Backend is working!"}
 
 
-@router.post("/ask")
-def ask(request: QuestionInput):
+@router.post("/ask", response_model=RAGResponse)
+def ask(request: QuestionInput) -> RAGResponse:
+    """Answer a question using retrieved chunks, optionally scoped to one document."""
     print("HELLO FROM BACKEND FOLDER!")
     try:
-        result = ask_rag(
-            request.question
+        metadata_filter = None
+        if request.document_id:
+            metadata_filter = {"document_id": request.document_id}
+
+        return ask_rag(
+            request.question,
+            metadata_filter=metadata_filter,
         )
-        return result
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail="The server encountered an error.")
