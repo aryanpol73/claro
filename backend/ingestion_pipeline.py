@@ -44,6 +44,7 @@ def ingest_document(file_path: str, document_id: str | None = None) -> dict:
         print("DEBUG 3: No chunks to store, stopping ingestion.")
         return {
             "message": "Failed: No chunks created",
+            "document_id": document_id,
             "total_pages": len(documents) if documents else 0,
             "total_chunks": 0
         }
