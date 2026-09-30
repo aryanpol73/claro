@@ -33,8 +33,8 @@ def list_vector_ids_for_document(document_id: str) -> List[str]:
     prefix = _chunk_id_prefix(document_id)
     collected: List[str] = []
 
-    for id_batch in index.list(prefix=prefix):
-        collected.extend(id_batch)
+    for page in index.list(prefix=prefix):
+        collected.extend(item.id for item in page.vectors)
 
     return collected
 
@@ -44,8 +44,8 @@ def document_exists(document_id: str) -> bool:
     index = get_pinecone_index()
     prefix = _chunk_id_prefix(document_id)
 
-    for id_batch in index.list(prefix=prefix, limit=1):
-        if id_batch:
+    for page in index.list(prefix=prefix, limit=1):
+        if page.vectors:
             return True
     return False
 
