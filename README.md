@@ -32,7 +32,7 @@ Claro is a retrieval-augmented generation (RAG) app for asking questions about a
 Create a `.env` file in the project root:
 
 ```env
-GOOGLE_API_KEY=your_google_api_key
+GROQ_API_KEY=your_GROQ_API_KEY
 PINECONE_API_KEY=your_pinecone_api_key
 LANGSMITH_API_KEY=your_langsmith_api_key
 ```

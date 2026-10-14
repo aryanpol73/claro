@@ -3,20 +3,28 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api import router
 
-app = FastAPI()
+app = FastAPI(
+    title="Claro API",
+    description="AI-Powered Academic Research Assistant & Cite-or-Refuse RAG Platform",
+    version="1.0.0",
+)
 
-# --- NEW CHANGE: Create a list of allowed websites to handle different ports and live servers ---
-allowed_websites = [
-    "http://localhost:5173",   # Your normal React frontend
-    "http://localhost:5174",   # Backup port if 5173 is busy
-    "http://127.0.0.1:5173",   # Another way computers write localhost
-    "https://my-rag-app.com"   # Your future live website (notice there is no slash at the very end)
+# Allowed origins for frontend local dev and preview environments
+allowed_origins = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
+    "http://127.0.0.1:5175",
+    "http://localhost:3000",
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    # --- NEW CHANGE: Give the middleware our safe list ---
-    allow_origins=allowed_websites,
+    allow_origins=allowed_origins,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
