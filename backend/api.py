@@ -220,8 +220,9 @@ def ask(request: QuestionInput) -> RAGResponse:
             metadata_filter=metadata_filter,
         )
     except Exception as e:
-        print(f"Error in /ask route: {e}")
-        raise HTTPException(status_code=500, detail="The server encountered an error answering the question.")
+        safe_err = str(e).encode("ascii", "replace").decode("ascii")
+        print(f"Error in /ask route: {safe_err}")
+        raise HTTPException(status_code=500, detail=f"Failed to answer question: {safe_err}")
 
 
 @router.post("/synthesize", response_model=RAGResponse)
@@ -233,8 +234,9 @@ def synthesize(request: SynthesizeInput) -> RAGResponse:
             document_ids=request.document_ids,
         )
     except Exception as e:
-        print(f"Error in /synthesize route: {e}")
-        raise HTTPException(status_code=500, detail="Failed to synthesize documents.")
+        safe_err = str(e).encode("ascii", "replace").decode("ascii")
+        print(f"Error in /synthesize route: {safe_err}")
+        raise HTTPException(status_code=500, detail=f"Failed to synthesize documents: {safe_err}")
 
 
 @router.post("/compare", response_model=RAGResponse)
@@ -250,8 +252,9 @@ def compare(request: CompareInput) -> RAGResponse:
             document_ids=request.document_ids,
         )
     except Exception as e:
-        print(f"Error in /compare route: {e}")
-        raise HTTPException(status_code=500, detail="Failed to compare documents.")
+        safe_err = str(e).encode("ascii", "replace").decode("ascii")
+        print(f"Error in /compare route: {safe_err}")
+        raise HTTPException(status_code=500, detail=f"Failed to compare documents: {safe_err}")
 
 
 @router.post("/config/keys")

@@ -77,7 +77,7 @@ export function Sidebar({
             type="file"
             ref={fileInputRef}
             onChange={handleFileChange}
-            accept=".pdf,.docx"
+            accept=".pdf,.docx,.pptx,.ppt"
             style={{ display: "none" }}
           />
           <div style={styles.uploadIconWrap}>
@@ -87,7 +87,7 @@ export function Sidebar({
             <div style={styles.uploadTextPrimary}>
               {isUploading ? "Ingesting & indexing..." : "Upload Academic Paper"}
             </div>
-            <div style={styles.uploadTextSub}>Drag & drop PDF / DOCX (max 50 MB)</div>
+            <div style={styles.uploadTextSub}>Drag & drop PDF / DOCX / PPTX (max 50 MB)</div>
           </div>
         </div>
       </div>

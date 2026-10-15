@@ -179,7 +179,12 @@ export function ChatWorkspace({
                 {/* Status Bar */}
                 <div style={styles.answerStatusBar}>
                   <div style={styles.statusBadgeWrap}>
-                    {msg.grounded ? (
+                    {msg.isError ? (
+                      <span style={{ ...styles.refusedBadge, backgroundColor: "rgba(244, 63, 94, 0.12)", color: "var(--rose)", borderColor: "rgba(244, 63, 94, 0.25)" }}>
+                        <IconShieldAlert size={14} />
+                        <span>System Error</span>
+                      </span>
+                    ) : msg.grounded ? (
                       <span style={styles.groundedBadge}>
                         <IconShieldCheck size={14} />
                         <span>Verified Grounded</span>
@@ -192,28 +197,30 @@ export function ChatWorkspace({
                     )}
                   </div>
 
-                  <div style={styles.answerActions}>
-                    <button
-                      onClick={() => copyAnswer(msg.answer, index)}
-                      style={styles.actionBtn}
-                      title="Copy Answer"
-                    >
-                      {copiedIndex === index ? <IconCheck size={14} /> : <IconCopy size={14} />}
-                      <span>{copiedIndex === index ? "Copied" : "Copy"}</span>
-                    </button>
-                    <button
-                      onClick={() => downloadNote(msg)}
-                      style={styles.actionBtn}
-                      title="Export as Markdown Note"
-                    >
-                      <IconDownload size={14} />
-                      <span>Export Note</span>
-                    </button>
-                  </div>
+                  {!msg.isError && (
+                    <div style={styles.answerActions}>
+                      <button
+                        onClick={() => copyAnswer(msg.answer, index)}
+                        style={styles.actionBtn}
+                        title="Copy Answer"
+                      >
+                        {copiedIndex === index ? <IconCheck size={14} /> : <IconCopy size={14} />}
+                        <span>{copiedIndex === index ? "Copied" : "Copy"}</span>
+                      </button>
+                      <button
+                        onClick={() => downloadNote(msg)}
+                        style={styles.actionBtn}
+                        title="Export as Markdown Note"
+                      >
+                        <IconDownload size={14} />
+                        <span>Export Note</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Main Answer Text */}
-                <div style={styles.answerBody}>
+                <div style={{ ...styles.answerBody, ...(msg.isError ? { color: "var(--rose)", borderLeft: "3px solid var(--rose)", paddingLeft: "12px" } : {}) }}>
                   {renderFormattedAnswer(msg.answer, msg.citations)}
                 </div>
 

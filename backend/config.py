@@ -1,6 +1,16 @@
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
+
+# Ensure UTF-8 output encoding on Windows console
+if sys.platform == "win32":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+os.environ["PYTHONIOENCODING"] = "utf-8"
+os.environ["PYTHONUTF8"] = "1"
 
 load_dotenv()
 
@@ -23,7 +33,7 @@ METADATA_FILE = UPLOAD_DIR / "documents_metadata.json"
 # Ensure essential directories exist
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-ALLOWED_EXTENSIONS = {".pdf", ".docx"}
+ALLOWED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".ppt"}
 MAX_FILE_SIZE_MB = 50
 
 # Embedding & LLM configuration with safe defaults
@@ -36,7 +46,18 @@ TOP_K_RESULTS = int(os.getenv("TOP_K_RESULTS", "4"))
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "academic-files-rag")
 
 
+def reload_env() -> None:
+    """Reload .env file to immediately pick up user credential changes."""
+    env_file = PROJECT_ROOT / ".env"
+    if env_file.exists():
+        try:
+            load_dotenv(env_file, override=True)
+        except Exception:
+            pass
+
+
 def get_groq_api_key() -> str | None:
+    reload_env()
     val = os.getenv("GROQ_API_KEY")
     if val and val.strip():
         return val.strip()
@@ -44,6 +65,7 @@ def get_groq_api_key() -> str | None:
 
 
 def get_google_api_key() -> str | None:
+    reload_env()
     val = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
     if val and val.strip():
         return val.strip()
@@ -51,6 +73,7 @@ def get_google_api_key() -> str | None:
 
 
 def get_pinecone_api_key() -> str | None:
+    reload_env()
     val = os.getenv("PINECONE_API_KEY")
     if val and val.strip():
         return val.strip()

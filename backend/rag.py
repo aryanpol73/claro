@@ -74,6 +74,29 @@ def _get_llm(model_name: Optional[str] = None):
     )
 
 
+def _normalize_text(text: str) -> str:
+    """Normalize Unicode characters to avoid console and parser encoding issues."""
+    if not text:
+        return ""
+    # Non-breaking hyphens, en-dash, em-dash to ASCII hyphen
+    text = (
+        text.replace("\u2011", "-")
+        .replace("\u2010", "-")
+        .replace("\u2013", "-")
+        .replace("\u2014", "-")
+    )
+    # Non-breaking spaces and narrow spaces
+    text = text.replace("\u00a0", " ").replace("\u202f", " ")
+    # Curly quotes to straight quotes
+    text = (
+        text.replace("\u2018", "'")
+        .replace("\u2019", "'")
+        .replace("\u201c", '"')
+        .replace("\u201d", '"')
+    )
+    return text
+
+
 def _parse_page(value: Any) -> Optional[int]:
     if value is None or value == "":
         return None
@@ -84,7 +107,7 @@ def _parse_page(value: Any) -> Optional[int]:
 
 
 def _clean_snippet(text: str) -> str:
-    cleaned = " ".join((text or "").split())
+    cleaned = " ".join(_normalize_text(text or "").split())
     if len(cleaned) <= SNIPPET_MAX_CHARS:
         return cleaned
     return cleaned[: SNIPPET_MAX_CHARS - 1].rstrip() + "…"
@@ -97,7 +120,7 @@ def _citation_from_document(document: Dict[str, Any], index: int) -> Citation:
         or metadata.get("document_id")
         or ""
     )
-    source = str(document.get("source") or metadata.get("source") or "Academic Source")
+    source = _normalize_text(str(document.get("source") or metadata.get("source") or "Academic Source"))
     page = _parse_page(document.get("page", metadata.get("page")))
     chunk_id = str(document.get("chunk_id") or metadata.get("chunk_id") or f"source-{index}")
     score = document.get("score")
@@ -118,7 +141,8 @@ def _format_context(documents: List[Dict[str, Any]]) -> str:
         citation = _citation_from_document(document, i)
         page_label = f"Page {citation.page}" if citation.page is not None else "Page unknown"
         header = f"[Source {i}: {citation.source} | {page_label} | ID={citation.chunk_id}]"
-        blocks.append(f"{header}\n{document.get('text') or ''}")
+        raw_text = _normalize_text(document.get("text") or "")
+        blocks.append(f"{header}\n{raw_text}")
     return "\n\n".join(blocks)
 
 
@@ -161,7 +185,7 @@ def ask_rag(
     """
     Retrieve evidence from Pinecone and produce a cite-or-refuse grounded answer.
     """
-    clean_question = str(question or "").strip()
+    clean_question = _normalize_text(str(question or "").strip())
     if not clean_question:
         return _ungrounded_response("Please provide a research question.")
 
@@ -177,26 +201,36 @@ def ask_rag(
             top_k=top_k,
             metadata_filter=metadata_filter,
         )
+        # If scoped to a specific document and no chunks were found, fallback to searching all documents
+        if not documents and metadata_filter:
+            documents = hybrid_search(
+                query=clean_question,
+                top_k=top_k,
+                metadata_filter=None,
+            )
     except Exception as search_err:
-        print(f"RAG search error: {search_err}")
+        safe_err = str(search_err).encode("ascii", "replace").decode("ascii")
+        print(f"RAG search error: {safe_err}")
         documents = []
 
     if not documents:
         return _ungrounded_response(
             "No relevant passages were found in the uploaded documents for this query. "
-            "Try broadening your terms or verifying that relevant documents are indexed."
+            "Try broadening your terms, clearing the document scope, or verifying that relevant documents are indexed."
         )
 
     context = _format_context(documents)[:16000]
 
-    system_instruction = f"""You are Claro, a rigorous academic research assistant.
-Your core principle is CITE-OR-REFUSE:
-1. Ground every claim strictly in the numbered sources below.
-2. Tag EVERY factual claim with an inline bracketed citation, e.g. [1], [2], corresponding to the source numbers.
-3. If the context does not contain sufficient factual evidence to answer the question, you MUST set grounded=false and answer:
+    system_instruction = f"""You are Claro, an academic research assistant and expert tutor.
+Your core principle is evidence-grounded academic accuracy:
+1. Provide a comprehensive, accurate answer or solution to the user's inquiry based strictly on the numbered sources below.
+2. Tag EVERY factual claim, step, formula, and key finding with an inline numerical citation, e.g. [1], [2], corresponding to the source numbers.
+3. If the user asks for a solution, explanation, or calculation, use the principles, definitions, and equations in the sources to clearly explain the step-by-step solution.
+4. If the provided sources only partially address the question, synthesize what is supported with citations and clearly note any specifics not covered in the text.
+5. Only if the provided context is completely unrelated to the question with zero relevant evidence should you answer:
 {REFUSE_MESSAGE}
-4. Do NOT use outside knowledge, speculation, or hallucinated facts.
-5. If there is partial information, explain what is supported with citations and clearly note what is not covered.
+and set grounded=false.
+6. Do NOT speculate or cite facts not evidenced by the sources.
 
 Context:
 {context}
@@ -205,24 +239,34 @@ Question:
 {clean_question}
 """
 
+    answer_text = ""
+    is_grounded = True
+
     try:
         llm = _get_llm()
-        structured_llm = llm.with_structured_output(GroundedAnswer)
-        parsed = structured_llm.invoke(system_instruction)
+        try:
+            structured_llm = llm.with_structured_output(GroundedAnswer)
+            parsed = structured_llm.invoke(system_instruction)
 
-        if isinstance(parsed, GroundedAnswer):
-            answer_text = parsed.answer
-            is_grounded = parsed.grounded
-        elif isinstance(parsed, dict) and "answer" in parsed:
-            answer_text = str(parsed["answer"])
-            is_grounded = bool(parsed.get("grounded", True))
-        else:
+            if isinstance(parsed, GroundedAnswer):
+                answer_text = parsed.answer
+                is_grounded = parsed.grounded
+            elif isinstance(parsed, dict) and "answer" in parsed:
+                answer_text = str(parsed["answer"])
+                is_grounded = bool(parsed.get("grounded", True))
+            else:
+                raw_response = llm.invoke(system_instruction)
+                answer_text = _extract_response_text(getattr(raw_response, "content", raw_response))
+                is_grounded = REFUSE_MESSAGE.lower() not in answer_text.lower()
+        except Exception as struct_err:
+            # If structured parsing failed, fall back to direct text invoke on primary model
             raw_response = llm.invoke(system_instruction)
             answer_text = _extract_response_text(getattr(raw_response, "content", raw_response))
             is_grounded = REFUSE_MESSAGE.lower() not in answer_text.lower()
 
     except Exception as llm_err:
-        print(f"LLM execution error: {llm_err}. Attempting fallback...")
+        safe_llm_err = str(llm_err).encode("ascii", "replace").decode("ascii")
+        print(f"LLM execution error: {safe_llm_err}. Attempting fallback...")
         try:
             fallback_model = "qwen/qwen3.8-27b" if is_groq_configured() else "gemini-1.5-flash"
             fallback_llm = _get_llm(model_name=fallback_model)
@@ -230,12 +274,15 @@ Question:
             answer_text = _extract_response_text(getattr(raw_response, "content", raw_response))
             is_grounded = REFUSE_MESSAGE.lower() not in answer_text.lower()
         except Exception as fallback_err:
-            print(f"LLM fallback failed: {fallback_err}")
+            safe_fb_err = str(fallback_err).encode("ascii", "replace").decode("ascii")
+            print(f"LLM fallback failed: {safe_fb_err}")
             return _ungrounded_response(
-                f"The AI service could not process the request ({str(llm_err)[:100]}). Please check your API key and network connection."
+                f"The AI service could not process the request ({safe_llm_err[:100]}). Please check your API key and network connection."
             )
 
-    if not is_grounded or REFUSE_MESSAGE in (answer_text or ""):
+    answer_text = _normalize_text(answer_text)
+
+    if not is_grounded and REFUSE_MESSAGE.lower() in (answer_text or "").lower():
         return _ungrounded_response(answer_text if answer_text else REFUSE_MESSAGE)
 
     used_indices = _cited_indices(answer_text, len(documents))
@@ -243,7 +290,7 @@ Question:
         used_indices = list(range(1, len(documents) + 1))
 
     citations = [_citation_from_document(documents[i - 1], i) for i in used_indices]
-    return RAGResponse(answer=answer_text, citations=citations, grounded=True, mode="qa")
+    return RAGResponse(answer=answer_text, citations=citations, grounded=is_grounded, mode="qa")
 
 
 def synthesize_cross_documents(

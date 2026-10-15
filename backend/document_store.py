@@ -95,7 +95,7 @@ def list_documents() -> List[Dict[str, Any]]:
                             "total_pages": None,
                             "total_chunks": None,
                             "uploaded_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                            "status": "ready",
+                            "status": "pending_index",
                         }
                         modified = True
 

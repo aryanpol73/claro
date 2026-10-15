@@ -24,5 +24,9 @@ def load_document(file_path: str) -> List[Document]:
             doc.metadata["source"] = file_path_obj.name
         return docs
 
+    elif file_extension in (".pptx", ".ppt"):
+        from backend.pptx_ingestion import load_pptx
+        return load_pptx(str(file_path_obj))
+
     else:
-        raise ValueError(f"Unsupported file type '{file_extension}'. Claro supports .pdf and .docx documents.")
+        raise ValueError(f"Unsupported file type '{file_extension}'. Claro supports .pdf, .docx, and .pptx documents.")

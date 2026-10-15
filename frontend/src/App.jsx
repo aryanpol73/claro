@@ -7,7 +7,12 @@ import { DocumentReader } from "./components/DocumentReader";
 import { LibraryView } from "./components/LibraryView";
 import { SetupModal } from "./components/SetupModal";
 
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE =
+  typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") &&
+  window.location.port === "5173"
+    ? ""
+    : "http://127.0.0.1:8000";
 
 function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem("claro_theme") || "dark");
@@ -119,8 +124,8 @@ function App() {
     if (!file) return;
 
     const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
-    if (ext !== ".pdf" && ext !== ".docx") {
-      showToast("Only PDF and DOCX documents are supported.", "error");
+    if (![".pdf", ".docx", ".pptx", ".ppt"].includes(ext)) {
+      showToast("Only PDF, DOCX, and PPTX documents are supported.", "error");
       return;
     }
 
@@ -217,11 +222,37 @@ function App() {
           },
         ]);
       } else {
-        showToast(data.detail || "Failed to retrieve answer.", "error");
+        const errorMsg = data.detail || "Failed to retrieve answer from Claro.";
+        showToast(errorMsg, "error");
+        setMessages((prev) => [
+          ...prev,
+          {
+            question,
+            answer: `Unable to complete request: ${errorMsg}`,
+            citations: [],
+            grounded: false,
+            isError: true,
+            scopedDocumentName: selectedDocumentName || null,
+            timestamp: new Date().toISOString(),
+          },
+        ]);
       }
     } catch (e) {
       console.error("Q&A error:", e);
-      showToast("Network error communicating with Claro backend.", "error");
+      const networkMsg = "Network error communicating with Claro backend. Please check that the server is running on port 8000.";
+      showToast(networkMsg, "error");
+      setMessages((prev) => [
+        ...prev,
+        {
+          question,
+          answer: `Network connection error: ${networkMsg}`,
+          citations: [],
+          grounded: false,
+          isError: true,
+          scopedDocumentName: selectedDocumentName || null,
+          timestamp: new Date().toISOString(),
+        },
+      ]);
     } finally {
       setIsAsking(false);
     }
