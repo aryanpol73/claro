@@ -7,6 +7,7 @@ import {
   IconExternalLink,
   IconSparkles,
 } from "./Icons";
+import { getApiBase } from "../config";
 
 export function SetupModal({ isOpen, onClose, systemStatus, onRefresh }) {
   const [groqKey, setGroqKey] = useState("");
@@ -29,7 +30,7 @@ export function SetupModal({ isOpen, onClose, systemStatus, onRefresh }) {
     setIsSaving(true);
     setSaveStatus(null);
     try {
-      const res = await fetch("http://127.0.0.1:8000/config/keys", {
+      const res = await fetch(`${getApiBase()}/config/keys`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -61,7 +62,7 @@ export function SetupModal({ isOpen, onClose, systemStatus, onRefresh }) {
     setIsIndexing(true);
     setIndexStatus(null);
     try {
-      const res = await fetch("http://127.0.0.1:8000/documents/index-all", {
+      const res = await fetch(`${getApiBase()}/documents/index-all`, {
         method: "POST",
       });
       const data = await res.json();

@@ -7,6 +7,7 @@ import {
   IconCheck,
   IconBookOpen,
 } from "./Icons";
+import { getApiBase } from "../config";
 
 export function DocumentReader({
   documents = [],
@@ -30,7 +31,7 @@ export function DocumentReader({
     if (!selectedDoc) return;
     setIsSummarizing(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/documents/${selectedDoc.document_id}/summarize`, {
+      const res = await fetch(`${getApiBase()}/documents/${selectedDoc.document_id}/summarize`, {
         method: "POST",
       });
       const data = await res.json();
@@ -67,7 +68,7 @@ export function DocumentReader({
   }
 
   const pdfUrl = selectedDoc
-    ? `http://127.0.0.1:8000/documents/${selectedDoc.document_id}/file#page=${targetPage || 1}`
+    ? `${getApiBase()}/documents/${selectedDoc.document_id}/file#page=${targetPage || 1}`
     : "";
 
   return (

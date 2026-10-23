@@ -22,6 +22,8 @@ export function Sidebar({
   onRefresh,
   isUploading,
   collapsed = false,
+  mobileOpen = false,
+  onCloseMobile,
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isDragOver, setIsDragOver] = useState(false);
@@ -56,10 +58,48 @@ export function Sidebar({
     }
   }
 
-  if (collapsed) return null;
+  function handleScopeAndClose(docId) {
+    onSelectDocument(docId);
+    if (onCloseMobile) onCloseMobile();
+  }
+
+  function handleReaderAndClose(docId) {
+    onOpenReader(docId);
+    if (onCloseMobile) onCloseMobile();
+  }
+
+  if (collapsed && !mobileOpen) return null;
 
   return (
-    <aside style={styles.sidebar}>
+    <>
+      {/* Mobile Drawer Backdrop */}
+      {mobileOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={onCloseMobile}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside className={`app-sidebar ${mobileOpen ? "mobile-open" : ""}`}>
+        {/* Mobile Drawer Top Bar */}
+        <div className="sidebar-mobile-header">
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <IconBookOpen size={18} style={{ color: "var(--primary)" }} />
+            <span style={{ fontWeight: "700", fontSize: "14px" }}>Library Papers</span>
+            <span className="badge-count">{documents.length}</span>
+          </div>
+          {onCloseMobile && (
+            <button
+              onClick={onCloseMobile}
+              className="sidebar-mobile-close-btn"
+              title="Close drawer"
+              type="button"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       {/* Upload Drop Zone */}
       <div style={styles.uploadSection}>
         <div
@@ -194,7 +234,13 @@ export function Sidebar({
                 {/* Actions row */}
                 <div style={styles.cardActions}>
                   <button
-                    onClick={() => onSelectDocument(isScoped ? "" : docId)}
+                    onClick={() => {
+                      if (isScoped) {
+                        onSelectDocument("");
+                      } else {
+                        handleScopeAndClose(docId);
+                      }
+                    }}
                     style={{
                       ...styles.actionBtn,
                       color: isScoped ? "var(--primary)" : "var(--text-secondary)",
@@ -207,7 +253,7 @@ export function Sidebar({
                   </button>
 
                   <button
-                    onClick={() => onOpenReader(docId)}
+                    onClick={() => handleReaderAndClose(docId)}
                     style={styles.actionBtnSecondary}
                     title="Read & inspect PDF document"
                   >
@@ -229,6 +275,7 @@ export function Sidebar({
         )}
       </div>
     </aside>
+    </>
   );
 }
 

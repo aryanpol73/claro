@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  IconLogo,
   IconSparkles,
   IconLayers,
   IconBookOpen,
@@ -9,7 +8,10 @@ import {
   IconMoon,
   IconShieldCheck,
   IconShieldAlert,
+  IconUploadCloud,
+  IconDownload,
 } from "./Icons";
+import logoImg from "../assets/claro-logo-sm.png";
 
 export function Header({
   activeMode,
@@ -19,8 +21,15 @@ export function Header({
   documentCount = 0,
   theme,
   toggleTheme,
+  onOpenMobileSidebar,
+  onOpenInstall,
+  isInstallable = false,
 }) {
-  const isConfigured = (systemStatus?.llm_configured || systemStatus?.groq_configured || systemStatus?.gemini_configured) && systemStatus?.pinecone_configured;
+  const isConfigured =
+    (systemStatus?.llm_configured ||
+      systemStatus?.groq_configured ||
+      systemStatus?.gemini_configured) &&
+    systemStatus?.pinecone_configured;
 
   const modes = [
     { id: "qa", label: "Research Q&A", icon: IconSparkles },
@@ -30,23 +39,40 @@ export function Header({
   ];
 
   return (
-    <header style={styles.header} className="glass-panel">
-      {/* Brand & Identity */}
-      <div style={styles.brandGroup}>
-        <div style={styles.logoBadge}>
-          <IconLogo size={24} />
+    <header className="app-header glass-panel">
+      {/* Brand & Identity + Mobile Menu Toggle */}
+      <div className="header-brand-group">
+        {/* Mobile Sidebar Toggle Button */}
+        <button
+          onClick={onOpenMobileSidebar}
+          className="header-mobile-sidebar-btn"
+          title="Open Papers Drawer"
+          type="button"
+          aria-label="Toggle Document Library Drawer"
+        >
+          <IconUploadCloud size={18} />
+          {documentCount > 0 && <span className="mobile-badge">{documentCount}</span>}
+        </button>
+
+        <div className="header-logo-badge">
+          <img
+            src={logoImg}
+            alt="Claro Logo"
+            className="header-logo-img"
+          />
         </div>
-        <div>
-          <div style={styles.brandTitleRow}>
-            <span style={styles.brandTitle}>CLARO</span>
-            <span style={styles.versionBadge}>v1.0</span>
+
+        <div className="header-brand-text">
+          <div className="brand-title-row">
+            <span className="brand-title">CLARO</span>
+            <span className="version-badge">v1.0</span>
           </div>
-          <span style={styles.brandSubtitle}>Academic Research Workspace</span>
+          <span className="brand-subtitle">Academic Research Workspace</span>
         </div>
       </div>
 
-      {/* Navigation Modes */}
-      <nav style={styles.navModes}>
+      {/* Desktop Navigation Modes (Hidden on Mobile) */}
+      <nav className="header-desktop-nav" aria-label="Desktop Navigation Modes">
         {modes.map((mode) => {
           const Icon = mode.icon;
           const isActive = activeMode === mode.id;
@@ -54,16 +80,14 @@ export function Header({
             <button
               key={mode.id}
               onClick={() => setActiveMode(mode.id)}
-              style={{
-                ...styles.modeButton,
-                ...(isActive ? styles.modeButtonActive : {}),
-              }}
+              className={`header-mode-btn ${isActive ? "active" : ""}`}
               title={mode.label}
+              type="button"
             >
               <Icon size={16} />
               <span>{mode.label}</span>
               {mode.id === "library" && documentCount > 0 && (
-                <span style={styles.badgeCount}>{documentCount}</span>
+                <span className="badge-count">{documentCount}</span>
               )}
             </button>
           );
@@ -71,27 +95,39 @@ export function Header({
       </nav>
 
       {/* Actions & Status */}
-      <div style={styles.actionsGroup}>
+      <div className="header-actions-group">
+        {/* PWA Install Button (if available or manual install guide) */}
+        {onOpenInstall && (
+          <button
+            onClick={onOpenInstall}
+            className={`header-action-btn install-app-btn ${isInstallable ? "ready-to-install" : ""}`}
+            title={isInstallable ? "Click to install Claro PWA" : "Install Claro PWA"}
+            type="button"
+          >
+            <IconDownload size={15} />
+            <span className="btn-label-desktop">Install App</span>
+            {isInstallable && <span className="install-pulse-dot" />}
+          </button>
+        )}
+
         {/* Status Pill */}
         <button
           onClick={onOpenSetup}
-          style={{
-            ...styles.statusPill,
-            backgroundColor: isConfigured ? "var(--emerald-bg)" : "var(--amber-bg)",
-            borderColor: isConfigured ? "var(--emerald-border)" : "var(--amber-border)",
-            color: isConfigured ? "var(--emerald)" : "var(--amber)",
-          }}
+          className={`header-status-pill ${isConfigured ? "ready" : "needs-setup"}`}
           title={isConfigured ? "Services connected and operational" : "Configure API Keys"}
+          type="button"
         >
           {isConfigured ? <IconShieldCheck size={14} /> : <IconShieldAlert size={14} />}
-          <span>{isConfigured ? "System Ready" : "Setup Keys"}</span>
+          <span className="status-text">{isConfigured ? "System Ready" : "Setup Keys"}</span>
         </button>
 
         {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
-          style={styles.iconButton}
+          className="header-icon-btn"
           title={theme === "dark" ? "Switch to Scholarly Light" : "Switch to Obsidian Dark"}
+          type="button"
+          aria-label="Toggle Theme"
         >
           {theme === "dark" ? <IconSun size={17} /> : <IconMoon size={17} />}
         </button>
@@ -99,123 +135,3 @@ export function Header({
     </header>
   );
 }
-
-const styles = {
-  header: {
-    height: "64px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "0 24px",
-    borderBottom: "1px solid var(--border-subtle)",
-    zIndex: 30,
-    userSelect: "none",
-  },
-  brandGroup: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-  },
-  logoBadge: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "36px",
-    height: "36px",
-    borderRadius: "var(--radius-md)",
-    background: "rgba(99, 102, 241, 0.12)",
-    border: "1px solid var(--border-accent)",
-  },
-  brandTitleRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-  brandTitle: {
-    fontFamily: "var(--font-heading)",
-    fontSize: "19px",
-    fontWeight: "800",
-    letterSpacing: "0.08em",
-    color: "var(--text-primary)",
-    background: "linear-gradient(135deg, #ffffff 40%, #a5b4fc 100%)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-  },
-  versionBadge: {
-    fontSize: "11px",
-    fontFamily: "var(--font-mono)",
-    fontWeight: "600",
-    padding: "1px 6px",
-    borderRadius: "var(--radius-full)",
-    backgroundColor: "var(--primary-light)",
-    color: "var(--primary)",
-    border: "1px solid var(--border-accent)",
-  },
-  brandSubtitle: {
-    fontSize: "12px",
-    color: "var(--text-muted)",
-    display: "block",
-    marginTop: "-2px",
-  },
-  navModes: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    backgroundColor: "var(--bg-card)",
-    padding: "4px",
-    borderRadius: "var(--radius-lg)",
-    border: "1px solid var(--border-subtle)",
-  },
-  modeButton: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    padding: "7px 14px",
-    fontSize: "13.5px",
-    fontWeight: "500",
-    color: "var(--text-secondary)",
-    borderRadius: "var(--radius-md)",
-    transition: "all var(--trans-fast)",
-  },
-  modeButtonActive: {
-    backgroundColor: "var(--bg-elevated)",
-    color: "var(--text-primary)",
-    fontWeight: "600",
-    boxShadow: "var(--shadow-sm)",
-  },
-  badgeCount: {
-    fontSize: "11px",
-    fontFamily: "var(--font-mono)",
-    padding: "1px 6px",
-    borderRadius: "var(--radius-full)",
-    backgroundColor: "var(--primary-light)",
-    color: "var(--primary)",
-  },
-  actionsGroup: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-  },
-  statusPill: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    padding: "5px 12px",
-    fontSize: "12px",
-    fontWeight: "600",
-    borderRadius: "var(--radius-full)",
-    border: "1px solid",
-    transition: "all var(--trans-fast)",
-  },
-  iconButton: {
-    width: "36px",
-    height: "36px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "var(--radius-md)",
-    color: "var(--text-secondary)",
-    backgroundColor: "var(--bg-card)",
-    border: "1px solid var(--border-subtle)",
-  },
-};

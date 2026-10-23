@@ -8,6 +8,7 @@ import {
   IconTrash,
   IconBookOpen,
 } from "./Icons";
+import { getApiBase } from "../config";
 
 export function LibraryView({
   documents = [],
@@ -95,7 +96,7 @@ export function LibraryView({
             <tbody>
               {filtered.map((doc) => {
                 const title = doc.original_filename || doc.name;
-                const pdfUrl = `http://127.0.0.1:8000/documents/${doc.document_id}/file`;
+                const pdfUrl = `${getApiBase()}/documents/${doc.document_id}/file`;
                 const dateStr = doc.uploaded_at
                   ? new Date(doc.uploaded_at).toLocaleDateString(undefined, {
                       month: "short",

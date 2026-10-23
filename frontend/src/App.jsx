@@ -6,21 +6,31 @@ import { SynthesisWorkspace } from "./components/SynthesisWorkspace";
 import { DocumentReader } from "./components/DocumentReader";
 import { LibraryView } from "./components/LibraryView";
 import { SetupModal } from "./components/SetupModal";
+import { BottomNav } from "./components/BottomNav";
+import { InstallPromptModal } from "./components/InstallPromptModal";
+import { getApiBase } from "./config";
+import { subscribeInstallable, isStandalone } from "./registerServiceWorker";
 
-const API_BASE =
-  typeof window !== "undefined" &&
-  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") &&
-  window.location.port === "5173"
-    ? ""
-    : "http://127.0.0.1:8000";
+const API_BASE = getApiBase();
 
 function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem("claro_theme") || "dark");
-  const [activeMode, setActiveMode] = useState("qa");
+  const [activeMode, setActiveMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search).get("mode");
+      if (p && ["qa", "synthesis", "reader", "library"].includes(p)) return p;
+    }
+    return "qa";
+  });
   const [systemStatus, setSystemStatus] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
   const [multiSelectedIds, setMultiSelectedIds] = useState([]);
+
+  // Mobile & PWA States
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
+  const [isInstallable, setIsInstallable] = useState(false);
 
   // Q&A Chat State
   const [messages, setMessages] = useState([]);
@@ -40,6 +50,17 @@ function App() {
   // Setup Modal & Toast
   const [isSetupOpen, setIsSetupOpen] = useState(false);
   const [toast, setToast] = useState(null);
+
+  // Subscribe to PWA installation state
+  useEffect(() => {
+    const unsub = subscribeInstallable((canInstall) => {
+      setIsInstallable(canInstall);
+    });
+    if (isStandalone()) {
+      document.body.classList.add("pwa-standalone");
+    }
+    return () => unsub();
+  }, []);
 
   // Initialize Theme
   useEffect(() => {
@@ -327,12 +348,18 @@ function App() {
       {/* Header */}
       <Header
         activeMode={activeMode}
-        setActiveMode={setActiveMode}
+        setActiveMode={(mode) => {
+          setActiveMode(mode);
+          setIsMobileSidebarOpen(false);
+        }}
         systemStatus={systemStatus}
         onOpenSetup={() => setIsSetupOpen(true)}
         documentCount={documents.length}
         theme={theme}
         toggleTheme={toggleTheme}
+        onOpenMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
+        onOpenInstall={() => setIsInstallModalOpen(true)}
+        isInstallable={isInstallable}
       />
 
       {/* Main Workspace Layout */}
@@ -354,10 +381,12 @@ function App() {
           }}
           isUploading={isUploading}
           collapsed={activeMode === "library"}
+          mobileOpen={isMobileSidebarOpen}
+          onCloseMobile={() => setIsMobileSidebarOpen(false)}
         />
 
         {/* Dynamic Mode Center Canvas */}
-        <main style={styles.mainCanvas}>
+        <main style={styles.mainCanvas} className="workspace-canvas">
           {activeMode === "qa" && (
             <ChatWorkspace
               messages={messages}
@@ -401,6 +430,24 @@ function App() {
           )}
         </main>
       </div>
+
+      {/* Mobile Glassmorphic Bottom Navigation */}
+      <BottomNav
+        activeMode={activeMode}
+        setActiveMode={(mode) => {
+          setActiveMode(mode);
+          setIsMobileSidebarOpen(false);
+        }}
+        documentCount={documents.length}
+        onOpenMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
+        isMobileSidebarOpen={isMobileSidebarOpen}
+      />
+
+      {/* PWA Install Promotion Modal */}
+      <InstallPromptModal
+        isOpen={isInstallModalOpen}
+        onClose={() => setIsInstallModalOpen(false)}
+      />
 
       {/* Credentials Setup Modal */}
       <SetupModal
